@@ -43,6 +43,7 @@ module HybiscusPdfReport
       Faraday.new do |conn|
         conn.url_prefix = hibiskus_api_url ## typically the base URL
         conn.request :json
+        conn.response :json, content_type: "application/json"
         conn.adapter adapter, @stubs
         conn.headers["X-API-KEY"] = api_key.to_s unless api_key.empty?
         # adds additional header information to the connection

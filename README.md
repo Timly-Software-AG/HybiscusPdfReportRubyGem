@@ -1,4 +1,4 @@
-# AxTrack API Ruby Wrapper
+# Hybiscus API Ruby Wrapper
 
 This is the API Wrapper for the Hybiscus REST API
 
@@ -31,7 +31,7 @@ client = HybiscusPdfReport::Client.new(api_key: your_api_key)
 client = HybiscusPdfReport::Client.new
 
 # The default time out is 10 seconds. To change the value, pass in the parameter
-client = AxTrack::Client.new(api_key: your_api_key, timeout: 20)
+client = HybiscusPdfReport::Client.new(api_key: your_api_key, timeout: 20)
 
 # If you have a Hybiscus in your private cloud and have a different URL, you can pass the URL as a parameter
 client = HybiscusPdfReport::Client.new(hibiskus_api_url: #URL#)
@@ -75,14 +75,14 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 To test the application in the console
 ```ruby
-client = AxTrack::Client.new(api_key: _YOUR_API_KEY_)
+client = HybiscusPdfReport::Client.new(api_key: _YOUR_API_KEY_)
 # to get a list of all trackers (just as an example)
 client.trackers.all
 ```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/axTrack.
+Bug reports and pull requests are welcome on GitHub at https://github.com/Timly-Software-AG/HybiscusPdfReportRubyGem.
 
 ## License
 
