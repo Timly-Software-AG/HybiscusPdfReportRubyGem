@@ -31,5 +31,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "faraday", "~> 1.10"
+  # base64 will no longer be part of the default gems after Ruby 3.4.0. Adding base64 gemspec.
+  spec.add_dependency "base64"
   spec.add_development_dependency "pry"
 end
