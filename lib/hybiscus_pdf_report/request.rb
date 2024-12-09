@@ -6,7 +6,8 @@ require "base64"
 module HybiscusPdfReport
   # Request Handler with the individual endpoints handling the communication with the Hybiscus PDF Reports API
   class Request
-    attr_reader :client, :response, :last_request_time_counting_against_rate_limit, :last_task_id, :last_task_status
+    attr_reader :client, :response, :last_request_time_counting_against_rate_limit, :last_task_id, :last_task_status,
+                :remaining_single_page_reports, :remaining_multi_page_reports
 
     def initialize(client)
       @client = client
@@ -20,7 +21,14 @@ module HybiscusPdfReport
       response_body = request(endpoint: "build-report", http_method: :post, body: report_request_as_json)
       ## HANDLE 402 RESPONSE --> PAYMENT REQUIRED
       update_last_request_information
-      Response.new(response_body)
+
+      response = Response.new(response_body.merge(
+                                remaining_single_page_reports: @response.headers["x-remaining-single-page-reports"],
+                                remaining_multi_page_reports: @response.headers["x-remaining-multi-page-reports"]
+                              ))
+
+      update_quota_information(response)
+      response
     end
 
     # POST
@@ -57,7 +65,9 @@ module HybiscusPdfReport
     end
 
     def get_remaining_quota
-      Response.new request(endpoint: "get-remaining-quota", http_method: :get)
+      response_body = request(endpoint: "get-remaining-quota", http_method: :get)
+
+      Response.new response_body
     end
     # rubocop: enable Naming/AccessorMethodName
 
@@ -78,6 +88,11 @@ module HybiscusPdfReport
       @last_request_time_counting_against_rate_limit = Time.now
       @last_task_id = response.body["task_id"]
       @last_task_status = response.body["status"]
+    end
+
+    def update_quota_information(response_object)
+      @remaining_single_page_reports = response_object.remaining_single_page_reports
+      @remaining_multi_page_reports = response_object.remaining_multi_page_reports
     end
 
     def raise_error
