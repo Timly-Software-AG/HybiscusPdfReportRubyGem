@@ -65,6 +65,8 @@ response = client.request.get_last_task_status
 response = client.request.get_report(task_id)
 # if you previously already made a request, you can get the status of the last task directly without having to store and pass the task_id
 response = client.request.get_last_report
+# To access the report
+response.report
 ```
 
 ## Development

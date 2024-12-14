@@ -1,0 +1,11 @@
+{
+    "remaining_single_page_reports": 95,
+    "remaining_multi_page_reports": 100,
+    "max_single_page_reports": 100,
+    "max_multi_page_reports": 100,
+    "max_pages_per_report": 5,
+    "period_start": "2024-11-21T17:08:01.459526",
+    "period_end": "2024-12-21T17:08:01.459526",
+    "error": null,
+    "subscription_active": true
+}

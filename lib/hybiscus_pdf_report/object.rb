@@ -10,12 +10,10 @@ module HybiscusPdfReport
     end
 
     def method_missing(method, *args, &block)
+      return super unless @attributes.respond_to?(method)
+
       attribute = @attributes.send(method, *args, &block)
-
-      return super if attribute.nil?
-      return Object.new(attribute) if attribute.is_a?(Hash)
-
-      attribute
+      attribute.is_a?(Hash) ? Object.new(attribute) : attribute
     end
 
     def respond_to_missing?(method, _include_private = false)

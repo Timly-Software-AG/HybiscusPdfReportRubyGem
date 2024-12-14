@@ -2,6 +2,7 @@
 
 require "json"
 require "base64"
+require "pry"
 
 module HybiscusPdfReport
   # Request Handler with the individual endpoints handling the communication with the Hybiscus PDF Reports API
@@ -55,7 +56,7 @@ module HybiscusPdfReport
 
     def get_report(task_id)
       response_body = request(endpoint: "get-report", http_method: :get, params: { task_id: task_id })
-      Response.new(satus: response.status, content: Base64.encode64(response_body))
+      Response.new(report: Base64.encode64(response_body))
     end
 
     def get_last_report
