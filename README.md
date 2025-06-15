@@ -27,15 +27,15 @@ The Gem is configured by default to work with the public platform of Hybiscus at
 ```ruby
 # To connect to the default SaaS Instance of Adnexo: https://prod.api.ax-track.ch/api/v1
 client = HybiscusPdfReport::Client.new(api_key: your_api_key)
-# Or if you have set ENV['HIBISCUS_API_KEY'] set, you don't need to pass in the api key.
+# Or if you have set ENV['HYBISCUS_API_KEY'] set, you don't need to pass in the api key.
 client = HybiscusPdfReport::Client.new
 
 # The default time out is 10 seconds. To change the value, pass in the parameter
 client = HybiscusPdfReport::Client.new(api_key: your_api_key, timeout: 20)
 
 # If you have a Hybiscus in your private cloud and have a different URL, you can pass the URL as a parameter
-client = HybiscusPdfReport::Client.new(hibiskus_api_url: #URL#)
-# You can also set the URL as  ENV["HIBISCUS_API_URL"]
+client = HybiscusPdfReport::Client.new(hybiskus_api_url: #URL#)
+# You can also set the URL as  ENV["HYBISCUS_API_URL"]
 ```
 
 ## Accessing the Endpoints

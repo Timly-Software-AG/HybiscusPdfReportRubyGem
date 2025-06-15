@@ -1,25 +1,38 @@
 # frozen_string_literal: true
 
-# Definition of all errors that can be raised by the Hybiscus PDF Reports API
+# These errors are automatically raised by the client based on HTTP status codes returned
+# by the Hybiscus API. Extend or rescue these as needed in application code.
+
 module HybiscusPdfReport
-  ApiError = Class.new(StandardError)
-  BadRequestError = Class.new(ApiError)
-  UnauthorizedError = Class.new(ApiError)
-  PaymentRequiredError = Class.new(ApiError)
-  ForbiddenError = Class.new(ApiError)
-  ApiRequestsQuotaReachedError = Class.new(ApiError)
-  NotFoundError = Class.new(ApiError)
-  UnprocessableEntityError = Class.new(ApiError)
-  RateLimitError = Class.new(ApiError)
+  class ApiError < StandardError; end
 
-  HTTP_OK_CODE                    = 200
+  # 400
+  class BadRequestError              < ApiError; end
+  # 401
+  class UnauthorizedError            < ApiError; end
+  # 402
+  class PaymentRequiredError         < ApiError; end
+  # 403
+  class ForbiddenError               < ApiError; end
+  # 404
+  class NotFoundError                < ApiError; end
+  # 422
+  class UnprocessableContentError    < ApiError; end
+  # 429
+  class ApiRequestsQuotaReachedError < ApiError; end
+  # 503
+  class RateLimitError               < ApiError; end
 
-  HTTP_BAD_REQUEST_CODE           = 400
-  HTTP_UNAUTHORIZED_CODE          = 401
-  HTTP_PAYMENT_REQUIRED_CODE      = 402
-  HTTP_FORBIDDEN_CODE             = 403
-  HTTP_NOT_FOUND_CODE             = 404
-  HTTP_UNPROCESSABLE_CONTENT_CODE = 422
-  HTTP_UNPROCESSABLE_ENTITY_CODE  = 429
-  HTTP_SERVICE_UNAVAILABLE_CODE   = 503
+  HTTP_ERROR_STATUS_CODES = {
+    400 => BadRequestError,
+    401 => UnauthorizedError,
+    402 => PaymentRequiredError,
+    403 => ForbiddenError,
+    404 => NotFoundError,
+    422 => UnprocessableContentError,
+    429 => ApiRequestsQuotaReachedError,
+    503 => RateLimitError
+  }.freeze
+
+  HTTP_OK_CODE = 200
 end

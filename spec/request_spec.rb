@@ -18,7 +18,7 @@ RSpec.describe HybiscusPdfReport::Request do
     it "endpoint build-report works" do
       client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub_build_report)
       response = client.request.build_report(report_json)
-      expect(response.class).to eq HybiscusPdfReport::Response
+      expect(response).to be_a HybiscusPdfReport::Response
       expect(response.task_id).to eq "bdc69c4d-3ba4-4a51-81c1-3c1aab358843"
       expect(response.status).to eq "QUEUED"
       expect(response.remaining_single_page_reports).to eq 20
@@ -39,7 +39,7 @@ RSpec.describe HybiscusPdfReport::Request do
 
     client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub)
     response = client.request.preview_report(report_json)
-    expect(response.class).to eq HybiscusPdfReport::Response
+    expect(response).to be_a HybiscusPdfReport::Response
     expect(response.task_id).to eq "bdc69c4d-3ba4-4a51-81c1-3c1aab358843"
     expect(response.status).to eq "QUEUED"
     expect(client.request.last_task_id).to eq response.task_id
@@ -51,7 +51,7 @@ RSpec.describe HybiscusPdfReport::Request do
 
     client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub)
     response = client.request.get_task_status(1234)
-    expect(response.class).to eq HybiscusPdfReport::Response
+    expect(response).to be_a(HybiscusPdfReport::Response)
     expect(response.status).to eq "SUCCESS"
   end
 
@@ -60,7 +60,7 @@ RSpec.describe HybiscusPdfReport::Request do
 
     client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub)
     response = client.request.get_remaining_quota
-    expect(response.class).to eq HybiscusPdfReport::Response
+    expect(response).to be_a(HybiscusPdfReport::Response)
     expect(response.remaining_single_page_reports).to eq 95
     expect(response.remaining_multi_page_reports).to eq 100
   end
@@ -71,8 +71,45 @@ RSpec.describe HybiscusPdfReport::Request do
 
     client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub)
     response = client.request.get_report(1234)
-    expect(response.class).to eq HybiscusPdfReport::Response
+    expect(response).to be_a HybiscusPdfReport::Response
     expect(response.status).to eq 200
     expect(response.report).to eq Base64.encode64(pdf_sample)
+  end
+
+  it "retries on rate limit error for certain errors" do
+    stub = Faraday::Adapter::Test::Stubs.new do |stub_builder|
+      path = "#{HybiscusPdfReport::Client::BASE_URL_API}build-report"
+
+      # First attempt raises an error
+      stub_builder.post(path) { raise HybiscusPdfReport::RateLimitError, "Rate limit hit" }
+
+      # Second attempt succeeds
+      stub_builder.post(path) { |_env| stub_response(fixture: "build_report_success") }
+    end
+
+    client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub)
+
+    response = client.request.build_report(report_json)
+    expect(response.status).to eq("QUEUED")
+  end
+
+  it "no retries are done for other errors" do
+    stub = Faraday::Adapter::Test::Stubs.new do |stub_builder|
+      path = "#{HybiscusPdfReport::Client::BASE_URL_API}build-report"
+
+      # First attempt raises an error
+      stub_builder.post(path) { raise HybiscusPdfReport::ApiRequestsQuotaReachedError }
+
+      # Second attempt succeeds
+      stub_builder.post(path) { |_env| stub_response(fixture: "build_report_success") }
+    end
+
+    client = HybiscusPdfReport::Client.new(api_key: "fake", adapter: :test, stubs: stub)
+
+    # no retry is done for an ApiRequestsQuotaReachedError. Hence an error is returned
+    # from this request
+    expect do
+      client.request.build_report(report_json)
+    end.to raise_error(HybiscusPdfReport::ApiRequestsQuotaReachedError)
   end
 end
