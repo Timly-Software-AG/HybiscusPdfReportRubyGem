@@ -6,21 +6,19 @@ require_relative "errors"
 module HybiscusPdfReport
   # Client handling the Faraday connection to the Hybiscus PDF Reports API
   class Client
-    attr_reader :api_key, :hibiskus_api_url, :adapter, :last_request, :email
+    attr_reader :api_key, :hybiskus_api_url, :adapter, :last_request, :email
 
     BASE_URL_API = "https://api.hybiscus.dev/api/v1/"
 
-    def initialize(api_key: ENV["HIBISCUS_API_KEY"],
-                   hibiskus_api_url: ENV["HIBISCUS_API_URL"],
+    def initialize(api_key: ENV["HYBISCUS_API_KEY"],
+                   hybiskus_api_url: ENV["HYBISCUS_API_URL"],
                    timeout: nil,
                    adapter: nil,
                    stubs: nil)
       @api_key            = api_key&.strip
-      # default to the main Adnexo production account
       raise ArgumentError, "No API key defined. Check documentation on how to set the API key." if @api_key.nil?
 
-      @hibiskus_api_url   = hibiskus_api_url || BASE_URL_API
-      # default to the main Adnexo production account
+      @hybiskus_api_url   = hybiskus_api_url || BASE_URL_API
       @timeout            = timeout
       # param made available for testing purposes: In the rspec tests the following adapter is used: :test
       # https://www.rubydoc.info/gems/faraday/Faraday/Adapter/Test
@@ -41,7 +39,7 @@ module HybiscusPdfReport
     # rubocop:disable Metrics/AbcSize
     def build_connection(header)
       Faraday.new do |conn|
-        conn.url_prefix = hibiskus_api_url ## typically the base URL
+        conn.url_prefix = hybiskus_api_url ## typically the base URL
         conn.request :json
         conn.response :json, content_type: "application/json"
         conn.adapter adapter, @stubs

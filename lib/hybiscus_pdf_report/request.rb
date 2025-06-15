@@ -56,7 +56,7 @@ module HybiscusPdfReport
 
     def get_report(task_id)
       response_body = request(endpoint: "get-report", http_method: :get, params: { task_id: task_id })
-      Response.new(report: Base64.encode64(response_body))
+      Response.new(report: Base64.encode64(response_body), status: HTTP_OK_CODE)
     end
 
     def get_last_report
@@ -77,12 +77,18 @@ module HybiscusPdfReport
     def request(endpoint:, http_method: :get, headers: {}, params: {}, body: {})
       raise "Client not defined" unless defined? @client
 
-      @response = client.connection.public_send(http_method, endpoint, params.merge(body), headers)
-      raise_error unless response_successful? && no_json_error?
+      retry_wrapper = RequestRetryWrapper.new(logger: defined?(Rails) ? Rails.logger : nil)
+
+      response_body = retry_wrapper.with_retries do
+        @response = client.connection.public_send(http_method, endpoint, params.merge(body), headers)
+        raise_error unless response_successful? && no_json_error?
+
+        @response.body
+      end
 
       @last_request = Time.now
 
-      response.body
+      response_body
     end
 
     def update_last_request_information
@@ -97,40 +103,21 @@ module HybiscusPdfReport
     end
 
     def raise_error
-      pretty_print_json_response
+      logger.debug response.body
 
       raise error_class(response.status), "Code: #{response.status}, response: #{response.reason_phrase}"
     end
 
-    # rubocop: disable Metrics/Metrics/MethodLength
     def error_class(status)
-      case status
-      when HTTP_BAD_REQUEST_CODE
-        BadRequestError
-      when HTTP_UNAUTHORIZED_CODE
-        UnauthorizedError
-      when HTTP_NOT_FOUND_CODE, HTTP_FORBIDDEN_CODE
-        NotFoundError
-      when HTTP_UNPROCESSABLE_ENTITY_CODE
-        UnprocessableEntityError
-      when HTTP_PAYMENT_REQUIRED_CODE
-        PaymentRequiredError
-      when HTTP_SERVICE_UNAVAILABLE_CODE
-        # Hybiscus API returns 503 when the rate limit is reached
-        # https://hybiscus.dev/docs/api/rate-limitting
-        RateLimitError
-      else
-        ApiError
-      end
+      HybiscusPdfReport::HTTP_ERROR_STATUS_CODES[status] || ApiError
     end
-    # rubocop: enable Metrics/Metrics/MethodLength
 
     def response_successful?
       response.status == HTTP_OK_CODE
     end
 
     def no_json_error?
-      response.status != HTTP_UNPROCESSABLE_CONTENT_CODE
+      response.status != HybiscusPdfReport::UnprocessableContentError
     end
 
     def pretty_print_json_response
