@@ -4,6 +4,7 @@
 # by the Hybiscus API. Extend or rescue these as needed in application code.
 
 module HybiscusPdfReport
+
   # rubocop:disable Style/CommentedKeyword
   class ApiError < StandardError; end
 
@@ -16,6 +17,8 @@ module HybiscusPdfReport
   class ApiRequestsQuotaReachedError < ApiError; end # 429
   class RateLimitError               < ApiError; end # 503
   # rubocop:enable Style/CommentedKeyword
+
+  class ApiError < StandardError; end
 
   HTTP_ERROR_STATUS_CODES = {
     400 => BadRequestError,
