@@ -2,6 +2,23 @@
 
 A Ruby client library for the [Hybiscus PDF Reports API](https://hybiscus.dev/), providing an easy way to generate PDF reports from JSON data.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+  - [Creating a Client](#creating-a-client)
+  - [API Endpoints](#api-endpoints)
+  - [Complete Workflow Example](#complete-workflow-example)
+- [Report Builder](#report-builder)
+  - [Basic Usage](#basic-usage)
+  - [ERB Templates](#erb-templates)
+  - [Advanced Configuration](#advanced-configuration)
+  - [Best Practices](#best-practices)
+- [Error Handling](#error-handling)
+- [Development](#development)
+- [Contributing](#contributing)
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -46,6 +63,8 @@ end
 ```
 
 ## Usage
+
+> **💡 Quick Start Tip**: For structured report generation, check out the [Report Builder](#report-builder) section which provides an elegant way to create reusable report templates using ERB.
 
 ### Creating a Client
 
@@ -199,6 +218,157 @@ rescue HybiscusPdfReport::ApiErrors::ApiError => e
   puts "API error: #{e.message}"
 rescue ArgumentError => e
   puts "Argument error: #{e.message}"
+end
+```
+
+## Report Builder
+
+The `HybiscusPdfReport::ReportBuilder` class provides a convenient way to create custom report builders that generate JSON structures for the Hybiscus API using ERB templates. This allows you to separate your report structure from your business logic and create reusable report types.
+
+### Basic Usage
+
+Create a custom report builder by inheriting from `ReportBuilder`:
+
+```ruby
+class InvoiceReport < HybiscusPdfReport::ReportBuilder
+  def initialize(invoice:, company:, **options)
+    @invoice = invoice
+    @company = company
+    super(report_name: "Invoice Report", **options)
+  end
+end
+
+# Use your custom report builder
+invoice = { id: 123, amount: 1000, customer: "ACME Corp" }
+company = { name: "Your Company", address: "123 Main St" }
+
+report = InvoiceReport.new(invoice: invoice, company: company)
+json_data = report.generate
+
+# Now use the JSON with the API client
+client = HybiscusPdfReport::Client.new
+response = client.request.build_report(JSON.parse(json_data))
+```
+
+### ERB Templates
+
+The ReportBuilder expects an ERB template file that matches your class name. For `InvoiceReport`, it would look for `invoice_report.json.erb` in the same directory as your class file.
+
+Example template (`invoice_report.json.erb`):
+
+```erb
+{
+  "template_id": "invoice_template_v1",
+  "data": {
+    "company": {
+      "name": "<%= @company[:name] %>",
+      "address": "<%= @company[:address] %>"
+    },
+    "invoice": {
+      "id": "<%= @invoice[:id] %>",
+      "amount": <%= @invoice[:amount] %>,
+      "customer": "<%= @invoice[:customer] %>",
+      "date": "<%= Date.current.strftime('%Y-%m-%d') %>"
+    },
+    "items": [
+      <% @invoice[:items]&.each_with_index do |item, index| %>
+      {
+        "description": "<%= item[:description] %>",
+        "quantity": <%= item[:quantity] %>,
+        "price": <%= item[:price] %>
+      }<%= index < @invoice[:items].length - 1 ? ',' : '' %>
+      <% end %>
+    ]
+  }
+}
+```
+
+### Advanced Configuration
+
+#### Custom Template Directory
+
+You can specify a custom directory for your templates:
+
+```ruby
+class CustomReport < HybiscusPdfReport::ReportBuilder
+  def initialize(data:, **options)
+    @data = data
+    super(
+      report_name: "Custom Report",
+      template_dir: Rails.root.join("app", "report_templates"),
+      **options
+    )
+  end
+end
+```
+
+#### Custom Template Name
+
+Override the template naming convention:
+
+```ruby
+class SalesReport < HybiscusPdfReport::ReportBuilder
+  def template_name
+    "monthly_sales.json.erb"  # Instead of sales_report.json.erb
+  end
+end
+```
+
+#### Dynamic Template Generation
+
+For complex reports, you can override the `render_json` method to generate JSON programmatically:
+
+```ruby
+class DynamicReport < HybiscusPdfReport::ReportBuilder
+  def initialize(template_config:, **data)
+    @template_config = template_config
+    @report_data = data
+    super(**data)
+  end
+
+  private
+
+  def render_json
+    {
+      template_id: @template_config[:template_id],
+      data: build_dynamic_data
+    }.to_json
+  end
+
+  def build_dynamic_data
+    # Build your JSON structure programmatically
+    result = {}
+    @template_config[:fields].each do |field|
+      result[field[:name]] = @report_data[field[:source]]
+    end
+    result
+  end
+end
+```
+
+### Template Helpers
+
+All instance variables set in your initializer are available in the ERB template:
+
+```ruby
+class ReportWithHelpers < HybiscusPdfReport::ReportBuilder
+  def initialize(order:, **options)
+    @order = order
+    @formatted_date = format_date(order[:created_at])
+    @total_with_tax = calculate_total_with_tax(order[:items])
+    super(**options)
+  end
+
+  private
+
+  def format_date(date)
+    Date.parse(date).strftime("%B %d, %Y")
+  end
+
+  def calculate_total_with_tax(items)
+    subtotal = items.sum { |item| item[:price] * item[:quantity] }
+    subtotal * 1.08  # 8% tax
+  end
 end
 ```
 
