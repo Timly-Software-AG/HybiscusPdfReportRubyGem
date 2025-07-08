@@ -78,7 +78,7 @@ RSpec.describe HybiscusPdfReport::Request do
 
   it "retries on rate limit error for certain errors" do
     stub = Faraday::Adapter::Test::Stubs.new do |stub_builder|
-      path = "#{HybiscusPdfReport::Client::BASE_URL_API}build-report"
+      path = "#{HybiscusPdfReport.config.api_url}build-report"
 
       # First attempt raises an error
       stub_builder.post(path) { raise HybiscusPdfReport::RateLimitError, "Rate limit hit" }
@@ -95,7 +95,7 @@ RSpec.describe HybiscusPdfReport::Request do
 
   it "no retries are done for other errors" do
     stub = Faraday::Adapter::Test::Stubs.new do |stub_builder|
-      path = "#{HybiscusPdfReport::Client::BASE_URL_API}build-report"
+      path = "#{HybiscusPdfReport.config.api_url}build-report"
 
       # First attempt raises an error
       stub_builder.post(path) { raise HybiscusPdfReport::ApiRequestsQuotaReachedError }

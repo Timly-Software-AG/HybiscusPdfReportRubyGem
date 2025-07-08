@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "hybiscus_pdf_report/errors"
+require "hybiscus_pdf_report/api_errors"
 
 RSpec.describe HybiscusPdfReport do
   context "HybiscusPdfReport Errors" do

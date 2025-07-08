@@ -4,10 +4,18 @@ require_relative "hybiscus_pdf_report/version"
 
 # Service to interact with the Hybiscus PDF Reports API
 module HybiscusPdfReport
+  # Core functionality
   autoload :Client, "hybiscus_pdf_report/client"
-  autoload :Errors, "hybiscus_pdf_report/errors"
-  autoload :RequestRetryWrapper, "hybiscus_pdf_report/request_retry_wrapper"
-  autoload :Request, "hybiscus_pdf_report/request"
-  autoload :Object, "hybiscus_pdf_report/object"
+  autoload :Config, "hybiscus_pdf_report/config"
   autoload :Response, "hybiscus_pdf_report/objects/response"
+
+  # Request handling and retries
+  autoload :Request, "hybiscus_pdf_report/request"
+  autoload :RequestRetryWrapper, "hybiscus_pdf_report/request_retry_wrapper"
+
+  # Object handling
+  autoload :Objects, "hybiscus_pdf_report/objects"
+
+  # Error handling
+  autoload :APIErrors, "hybiscus_pdf_report/api_errors"
 end

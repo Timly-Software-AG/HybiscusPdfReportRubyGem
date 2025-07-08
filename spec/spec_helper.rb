@@ -14,5 +14,12 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
+  # Reset the global config before/after each example
+  config.around do |example|
+    old_config = HybiscusPdfReport.config.dup
+    example.run
+    HybiscusPdfReport.instance_variable_set(:@config, old_config)
+  end
+
   config.include StubHelpers
 end
