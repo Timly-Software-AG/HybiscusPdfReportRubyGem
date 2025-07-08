@@ -1,23 +1,12 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
+# Legacy placeholder file for backward compatibility
+# This file exists for historical reasons and may be removed in future versions.
+# Use HybiscusPdfReport::ResponseObject instead.
 module HybiscusPdfReport
-  # Base class for all objects returned by the Hybiscus PDF Reports API
-  class Object
-    def initialize(attributes)
-      @attributes = OpenStruct.new(attributes)
-    end
-
-    def method_missing(method, *args, &block)
-      return super unless @attributes.respond_to?(method)
-
-      attribute = @attributes.send(method, *args, &block)
-      attribute.is_a?(Hash) ? Object.new(attribute) : attribute
-    end
-
-    def respond_to_missing?(method, _include_private = false)
-      @attributes.respond_to? method
-    end
+  # Placeholder for legacy compatibility
+  # @deprecated Use ResponseObject instead
+  module Object
+    # This module is deprecated
   end
 end

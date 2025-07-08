@@ -1,10 +1,15 @@
 # frozen_string_literal: true
 
+require "json"
 require "pry"
+
+# Helper module for stubbing HTTP requests in tests
 module StubHelpers
-  def stub_request(path, response:, method: :get, body: {})
+  def stub_request(endpoint, response:, method: :get, body: {})
+    base_url = HybiscusPdfReport.config.api_url
+    path = base_url + endpoint
+
     Faraday::Adapter::Test::Stubs.new do |stub|
-      path = HybiscusPdfReport::Client::BASE_URL_API + path
       arguments = [method, path]
       # add in the body whenever it's required
       arguments << body.to_json if %i[post put patch].include? method

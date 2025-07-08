@@ -2,6 +2,8 @@
 
 require "hybiscus_pdf_report"
 require "support/stub_helpers"
+require "support/shared_examples"
+require "support/test_helpers"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -13,6 +15,8 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
+
+  # Reset the global config before/after each example
 
   config.include StubHelpers
 end
