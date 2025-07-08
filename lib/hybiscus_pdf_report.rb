@@ -14,8 +14,17 @@ module HybiscusPdfReport
   autoload :RequestRetryWrapper, "hybiscus_pdf_report/request_retry_wrapper"
 
   # Object handling
-  autoload :Objects, "hybiscus_pdf_report/objects"
+  autoload :ResponseObject, "hybiscus_pdf_report/response_object"
 
   # Error handling
   autoload :APIErrors, "hybiscus_pdf_report/api_errors"
+
+  # Module-level configuration
+  def self.config
+    @config ||= Config.new
+  end
+
+  def self.configure
+    yield(config) if block_given?
+  end
 end

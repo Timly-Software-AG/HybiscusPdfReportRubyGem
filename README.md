@@ -84,8 +84,6 @@ response = client.request.build_report(report_data)
 # Access response data
 puts response.task_id
 puts response.status
-puts response.remaining_single_page_reports
-puts response.remaining_multi_page_reports
 ```
 
 #### 2. Preview Report
@@ -151,21 +149,7 @@ require 'base64'
 client = HybiscusPdfReport::Client.new
 
 # Prepare report data
-report_data = {
-  template: "invoice",
-  data: {
-    invoice_number: "INV-001",
-    customer: {
-      name: "Acme Corp",
-      address: "123 Business St, City, State 12345"
-    },
-    items: [
-      { description: "Consulting Services", quantity: 10, rate: 150.00 },
-      { description: "Software License", quantity: 1, rate: 500.00 }
-    ],
-    total: 2000.00
-  }
-}
+report_data = { _SOME_JSON_STRUCTURE_ }
 
 begin
   # Submit report for processing
@@ -173,7 +157,6 @@ begin
   task_id = response.task_id
 
   puts "Report submitted. Task ID: #{task_id}"
-  puts "Remaining quota: #{response.remaining_single_page_reports} single-page reports"
 
   # Poll for completion
   loop do
@@ -206,10 +189,12 @@ begin
 
   puts "Report saved as generated_report.pdf"
 
-rescue HybiscusPdfReport::ApiErrors::RateLimitExceededError => e
-  puts "Rate limit exceeded: #{e.message}"
+rescue HybiscusPdfReport::ApiErrors::ApiRequestsQuotaReachedError => e
+  puts "API quota reached: #{e.message}"
 rescue HybiscusPdfReport::ApiErrors::PaymentRequiredError => e
   puts "Payment required: #{e.message}"
+rescue HybiscusPdfReport::ApiErrors::RateLimitError => e
+  puts "Rate limit error persisted after automatic retries: #{e.message}"
 rescue HybiscusPdfReport::ApiErrors::ApiError => e
   puts "API error: #{e.message}"
 rescue ArgumentError => e
@@ -219,21 +204,50 @@ end
 
 ### Error Handling
 
-The gem includes specific error classes for different API error conditions:
+The gem includes specific error classes for different API error conditions and **automatically handles transient errors** like rate limits and network timeouts with exponential backoff retry logic.
+
+#### Automatic Retry Handling
+
+The gem automatically retries the following errors up to 5 times with exponential backoff (1s, 2s, 4s, 8s, 16s):
+
+- `RateLimitError` (HTTP 503) - When the API is temporarily overloaded
+- `Faraday::TimeoutError` - Network timeout errors
+- `Faraday::ConnectionFailed` - Network connection failures
+
+You don't need to handle these errors manually - the gem will automatically retry and only raise an exception if all retry attempts are exhausted.
+
+#### Manual Error Handling
+
+For other API errors, you should handle them explicitly in your code:
 
 ```ruby
 begin
   response = client.request.build_report(report_data)
-rescue HybiscusPdfReport::ApiErrors::RateLimitExceededError => e
-  puts "Rate limit exceeded. Please wait before retrying."
+rescue HybiscusPdfReport::ApiErrors::ApiRequestsQuotaReachedError => e
+  puts "API quota reached (HTTP 429). Please upgrade your plan."
 rescue HybiscusPdfReport::ApiErrors::PaymentRequiredError => e
-  puts "Payment required. Please check your account."
+  puts "Payment required (HTTP 402). Please check your account."
 rescue HybiscusPdfReport::ApiErrors::UnauthorizedError => e
-  puts "Unauthorized. Please check your API key."
+  puts "Unauthorized (HTTP 401). Please check your API key."
+rescue HybiscusPdfReport::ApiErrors::BadRequestError => e
+  puts "Bad request (HTTP 400). Please check your request data."
+rescue HybiscusPdfReport::ApiErrors::RateLimitError => e
+  puts "Rate limit error persisted after retries. Please try again later."
 rescue HybiscusPdfReport::ApiErrors::ApiError => e
-  puts "API error: #{e.message}"
+  puts "API error: #{e.message} (HTTP #{e.status_code})"
 end
 ```
+
+#### Available Error Classes
+
+- `BadRequestError` (HTTP 400) - Invalid request data
+- `UnauthorizedError` (HTTP 401) - Invalid or missing API key
+- `PaymentRequiredError` (HTTP 402) - Payment required for the account
+- `ForbiddenError` (HTTP 403) - Access forbidden
+- `NotFoundError` (HTTP 404) - Resource not found
+- `UnprocessableContentError` (HTTP 422) - Request data cannot be processed
+- `ApiRequestsQuotaReachedError` (HTTP 429) - API request quota exceeded
+- `RateLimitError` (HTTP 503) - Rate limit exceeded (automatically retried)
 
 ### Response Objects
 
@@ -245,7 +259,6 @@ response = client.request.build_report(report_data)
 # Access attributes dynamically
 puts response.task_id
 puts response.status
-puts response.remaining_single_page_reports
 
 # Response objects support nested attribute access
 if response.respond_to?(:error)

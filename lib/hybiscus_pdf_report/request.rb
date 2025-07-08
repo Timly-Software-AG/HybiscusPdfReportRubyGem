@@ -7,8 +7,7 @@ require "pry"
 module HybiscusPdfReport
   # Request Handler with the individual endpoints handling the communication with the Hybiscus PDF Reports API
   class Request
-    attr_reader :client, :response, :last_request_time_counting_against_rate_limit, :last_task_id, :last_task_status,
-                :remaining_single_page_reports, :remaining_multi_page_reports
+    attr_reader :client, :response, :last_request_time_counting_against_rate_limit, :last_task_id, :last_task_status
 
     def initialize(client)
       @client = client
@@ -21,21 +20,15 @@ module HybiscusPdfReport
     def build_report(report_request_as_json)
       response_body = request(endpoint: "build-report", http_method: :post, body: report_request_as_json)
       ## HANDLE 402 RESPONSE --> PAYMENT REQUIRED
-      update_last_request_information
+      update_last_request_information(response_body)
 
-      response = Response.new(response_body.merge(
-                                remaining_single_page_reports: @response.headers["x-remaining-single-page-reports"],
-                                remaining_multi_page_reports: @response.headers["x-remaining-multi-page-reports"]
-                              ))
-
-      update_quota_information(response)
-      response
+      @response = Response.new(response_body)
     end
 
     # POST
     def preview_report(report_request_as_json)
       response_body = request(endpoint: "preview-report", http_method: :post, body: report_request_as_json)
-      update_last_request_information
+      update_last_request_information(response_body)
       Response.new(response_body)
     end
 
@@ -44,7 +37,7 @@ module HybiscusPdfReport
       response_body = request(endpoint: "get-task-status", params: { task_id: task_id })
       # The last task status is stored. If this method is called with the same task_id, the last task status is updated
       # in the instance variable
-      @last_task_status = response.body["status"] if last_task_id == task_id
+      @last_task_status = response_body["status"] if last_task_id == task_id
       Response.new(response_body)
     end
 
@@ -56,7 +49,7 @@ module HybiscusPdfReport
 
     def get_report(task_id)
       response_body = request(endpoint: "get-report", http_method: :get, params: { task_id: task_id })
-      Response.new(report: Base64.encode64(response_body), status: HTTP_OK_CODE)
+      Response.new(report: Base64.encode64(response_body), status: HybiscusPdfReport::HTTP_OK_CODE)
     end
 
     def get_last_report
@@ -83,6 +76,7 @@ module HybiscusPdfReport
         @response = client.connection.public_send(http_method, endpoint, params.merge(body), headers)
         raise_error unless response_successful? && no_json_error?
 
+        # Return raw body for binary data (no JSON parsing)
         @response.body
       end
 
@@ -91,19 +85,14 @@ module HybiscusPdfReport
       response_body
     end
 
-    def update_last_request_information
+    def update_last_request_information(response_body)
       @last_request_time_counting_against_rate_limit = Time.now
-      @last_task_id = response.body["task_id"]
-      @last_task_status = response.body["status"]
-    end
-
-    def update_quota_information(response_object)
-      @remaining_single_page_reports = response_object.remaining_single_page_reports
-      @remaining_multi_page_reports = response_object.remaining_multi_page_reports
+      @last_task_id = response_body["task_id"]
+      @last_task_status = response_body["status"]
     end
 
     def raise_error
-      logger.debug response.body
+      # logger.debug response.body
 
       raise error_class(response.status), "Code: #{response.status}, response: #{response.reason_phrase}"
     end

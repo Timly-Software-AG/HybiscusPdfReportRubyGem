@@ -2,6 +2,7 @@
 
 require "faraday"
 require_relative "api_errors"
+require_relative "config"
 
 module HybiscusPdfReport
   # Client handling the Faraday connection to the Hybiscus PDF Reports API
@@ -11,7 +12,10 @@ module HybiscusPdfReport
     # rubocop:disable Metrics/CyclomaticComplexity)
     def initialize(api_key: nil, api_url: nil, timeout: nil, adapter: nil, stubs: nil)
       @api_key = (api_key || config.api_key)&.strip
-      raise ArgumentError, "No API key defined. Set it in config or pass to Client.new." if @api_key.nil?
+      if @api_key.nil? || @api_key.empty?
+        raise ArgumentError,
+              "No API key defined. Set it in config or pass to Client.new."
+      end
 
       @api_url = api_url || config.api_url
       @timeout = timeout || config.timeout
@@ -40,7 +44,7 @@ module HybiscusPdfReport
         conn.request :json
         conn.response :json, content_type: "application/json"
         conn.adapter adapter, @stubs
-        conn.headers["X-API-KEY"] = api_key.to_s unless api_key.empty?
+        conn.headers["X-API-KEY"] = api_key unless api_key.nil? || api_key.empty?
         # adds additional header information to the connection
 
         header.each { |key, value| conn.headers[key] = value }

@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+require "faraday"
+
 module HybiscusPdfReport
   class Config
     attr_accessor :api_key, :api_url, :timeout, :adapter, :stubs

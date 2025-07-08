@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "../object"
+require_relative "../response_object"
 module HybiscusPdfReport
-  class Response < HybiscusPdfReport::Object
+  class Response < HybiscusPdfReport::ResponseObject
   end
 end

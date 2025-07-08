@@ -15,3 +15,4 @@ gem "rubocop", "~> 1.21"
 gem "rubocop-rspec", require: false
 
 gem "pry"
+gem "pry-nav"

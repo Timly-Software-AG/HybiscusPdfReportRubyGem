@@ -2,6 +2,8 @@
 
 require "hybiscus_pdf_report"
 require "support/stub_helpers"
+require "support/shared_examples"
+require "support/test_helpers"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -15,11 +17,6 @@ RSpec.configure do |config|
   end
 
   # Reset the global config before/after each example
-  config.around do |example|
-    old_config = HybiscusPdfReport.config.dup
-    example.run
-    HybiscusPdfReport.instance_variable_set(:@config, old_config)
-  end
 
   config.include StubHelpers
 end

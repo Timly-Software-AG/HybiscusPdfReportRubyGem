@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
+require "json"
 require "pry"
+
 module StubHelpers
   def stub_request(endpoint, response:, method: :get, body: {})
     base_url = HybiscusPdfReport.config.api_url

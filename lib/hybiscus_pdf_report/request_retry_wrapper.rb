@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "faraday"
+require_relative "api_errors"
+
 module HybiscusPdfReport
   # RequestRetryWrapper provides automatic retry logic for transient errors
   # when communicating with the Hybiscus API (e.g., rate limits, timeouts).
@@ -42,7 +45,7 @@ module HybiscusPdfReport
     def handle_retry_or_raise(error, attempts)
       if attempts >= @max_attempts
         log_retry_exhausted(error, attempts)
-        raise e
+        raise error
       else
         wait_time = compute_delay(attempts)
         log_retry_attempt(error, attempts, wait_time)
