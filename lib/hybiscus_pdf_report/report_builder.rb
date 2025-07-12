@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "erb"
+require "json"
 require "pathname"
 
 module HybiscusPdfReport
@@ -10,35 +11,28 @@ module HybiscusPdfReport
   # It provides a simple way to generate JSON structures for the Hybiscus API using ERB templates.
   #
   # Template files are automatically named based on your class name with .json.erb extension.
-  # For example, InvoiceReport will look for invoice_report.json.erb
+  # For example, InvoiceReport will look for invoice_report.json.erb in the same directory
+  # as your class file.
   #
   # Usage:
   #   class InvoiceReport < HybiscusPdfReport::ReportBuilder
   #     def initialize(invoice:, **options)
   #       @invoice = invoice
-  #       super(report_name: "Invoice Report", **options)
+  #       super(**options)
   #     end
   #   end
   #
   # Custom template name:
   #   class CustomReport < HybiscusPdfReport::ReportBuilder
-  #     def template_base_name
+  #     def template_name
   #       "my_custom_template"  # Will use my_custom_template.json.erb
   #     end
   #   end
   #
   #   report = InvoiceReport.new(invoice: my_invoice)
-  #   json_data = report.generate
+  #   json_data = report.generate_json
   class ReportBuilder
-    DEFAULT_TEMPLATE_DIR = File.dirname(__FILE__)
-
-    attr_reader :report_name, :template_dir
-
-    def initialize(report_name: nil, template_dir: nil, **template_params)
-      # Set the report name - use provided name or derive from class name
-      @report_name = report_name || derive_report_name
-      @template_dir = template_dir || DEFAULT_TEMPLATE_DIR
-
+    def initialize(**template_params)
       # Dynamically set all parameters as instance variables
       template_params.each do |key, value|
         instance_variable_set("@#{key}", value)
@@ -47,18 +41,24 @@ module HybiscusPdfReport
 
     # Main method to generate the report JSON
     # Returns a JSON string that can be sent to the Hybiscus API
-    def generate
-      render_json
+    def generate_json
+      generate
     end
 
-    # Returns the full path to the template file
-    def template_path
-      # Use the path of the file where the subclass is defined
-      subclass_file = self.class.instance_method(:initialize).source_location&.first
-      base_dir = subclass_file ? File.dirname(subclass_file) : template_dir
-      File.join(template_dir, "#{template_name}.json.erb")
+    # Use this method to output and analyze the rendered JSON
+    def generate_hash
+      JSON.parse(generate_json)
     end
-    
+
+    # As default, the template_path is the same as where the main ruby class is located (which inherits from this class)
+    # Override this method in subclasses to use a custom template name
+    def template_path
+      subclass_file = self.class.instance_method(:initialize).source_location&.first
+      File.dirname(subclass_file)
+    end
+
+    # As default, the template_name is derived from the ruby class name (from which it inherits).
+    # Override this method in subclasses to use a custom template name (without .json.erb extension).
     def template_name
       underscore(class_name)
     end
@@ -72,22 +72,21 @@ module HybiscusPdfReport
     private
 
     # Renders the ERB template with all instance variables available
-    def render_json
-      unless File.exist?(template_path)
-        raise "Template file not found: #{template_path}. " \
+    def generate
+      unless File.exist?(full_template_path)
+        raise "Template file not found: #{full_template_path}. " \
               "Create a template file or override the render_json method."
       end
 
-      template_content = File.read(template_path)
+      template_content = File.read(full_template_path)
       template = ERB.new(template_content)
 
       # Render the template with all instance variables in scope
       template.result(binding)
     end
 
-    # Derives a report name from the class name
-    def derive_report_name
-      humanize(class_name)
+    def full_template_path
+      File.join(template_path, "#{template_name}.json.erb")
     end
 
     # Returns the class name without module prefix
@@ -101,11 +100,6 @@ module HybiscusPdfReport
         .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
         .gsub(/([a-z\d])([A-Z])/, '\1_\2')
         .downcase
-    end
-
-    # Converts CamelCase to human readable format
-    def humanize(string)
-      underscore(string).tr("_", " ").split.map(&:capitalize).join(" ")
     end
   end
 end

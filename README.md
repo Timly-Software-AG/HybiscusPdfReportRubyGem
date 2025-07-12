@@ -208,13 +208,13 @@ begin
 
   puts "Report saved as generated_report.pdf"
 
-rescue HybiscusPdfReport::ApiErrors::ApiRequestsQuotaReachedError => e
+rescue HybiscusPdfReport::ApiRequestsQuotaReachedError => e
   puts "API quota reached: #{e.message}"
-rescue HybiscusPdfReport::ApiErrors::PaymentRequiredError => e
+rescue HybiscusPdfReport::PaymentRequiredError => e
   puts "Payment required: #{e.message}"
-rescue HybiscusPdfReport::ApiErrors::RateLimitError => e
+rescue HybiscusPdfReport::RateLimitError => e
   puts "Rate limit error persisted after automatic retries: #{e.message}"
-rescue HybiscusPdfReport::ApiErrors::ApiError => e
+rescue HybiscusPdfReport::ApiError => e
   puts "API error: #{e.message}"
 rescue ArgumentError => e
   puts "Argument error: #{e.message}"
@@ -304,17 +304,17 @@ end
 
 #### Custom Template Name
 
-You can override the file name of the returned file by overriding the `template__name` method. The `.json.erb` extension is added automatically:
+You can override the template file name by overriding the `template_base_name` method. The `.json.erb` extension is added automatically:
 
 ```ruby
 class SalesReport < HybiscusPdfReport::ReportBuilder
-  def template_name
+  def template_base_name
     "monthly_sales"  # Will use monthly_sales.json.erb
   end
 end
 
 class QuarterlyReport < HybiscusPdfReport::ReportBuilder
-  def template__name
+  def template_base_name
     "reports/quarterly_summary"  # Will use reports/quarterly_summary.json.erb
   end
 end
@@ -354,6 +354,68 @@ class DynamicReport < HybiscusPdfReport::ReportBuilder
 end
 ```
 
+### Template Methods
+
+The ReportBuilder provides two key methods for working with your report data:
+
+#### `render_json` (Private Method)
+
+The `render_json` method processes your ERB template and returns a **JSON string**. This method:
+
+- Reads the ERB template file (`.json.erb`)
+- Renders the template with all instance variables in scope
+- Returns the result as a JSON-formatted string
+
+```ruby
+class MyReport < HybiscusPdfReport::ReportBuilder
+  def debug_template_output
+    # Access the rendered JSON string (for debugging purposes)
+    puts render_json
+    # Output: '{"template_id": "my_template", "data": {...}}'
+  end
+end
+```
+
+#### `render_hash` (Public Method)
+
+The `render_hash` method provides the rendered template as a **Ruby Hash** for easier manipulation and inspection:
+
+```ruby
+class InvoiceReport < HybiscusPdfReport::ReportBuilder
+  def initialize(invoice:, **options)
+    @invoice = invoice
+    super(**options)
+  end
+
+  def validate_template
+    # Get the rendered data as a Hash for validation
+    data = render_hash
+
+    # Perform validations
+    raise "Missing invoice ID" unless data.dig("data", "invoice", "id")
+    raise "Invalid amount" unless data.dig("data", "invoice", "amount").positive?
+
+    data
+  end
+end
+
+# Usage
+report = InvoiceReport.new(invoice: { id: 123, amount: 1000 })
+
+# Get as Hash for inspection/validation
+hash_data = report.render_hash
+puts hash_data.class  # => Hash
+puts hash_data["data"]["invoice"]["id"]  # => 123
+
+# Get as JSON string for API submission
+json_string = report.generate
+puts json_string.class  # => String
+```
+
+**Key Differences:**
+- `render_json` returns a **String** (JSON format) - used internally by `generate`
+- `render_hash` returns a **Hash** (Ruby object) - useful for debugging, validation, and data manipulation
+
 ### Template Helpers
 
 All instance variables set in your initializer are available in the ERB template:
@@ -380,7 +442,7 @@ class ReportWithHelpers < HybiscusPdfReport::ReportBuilder
 end
 ```
 
-### Error Handling
+## Error Handling
 
 The gem includes specific error classes for different API error conditions and **automatically handles transient errors** like rate limits and network timeouts with exponential backoff retry logic.
 
@@ -401,17 +463,17 @@ For other API errors, you should handle them explicitly in your code:
 ```ruby
 begin
   response = client.request.build_report(report_data)
-rescue HybiscusPdfReport::ApiErrors::ApiRequestsQuotaReachedError => e
+rescue HybiscusPdfReport::ApiRequestsQuotaReachedError => e
   puts "API quota reached (HTTP 429). Please upgrade your plan."
-rescue HybiscusPdfReport::ApiErrors::PaymentRequiredError => e
+rescue HybiscusPdfReport::PaymentRequiredError => e
   puts "Payment required (HTTP 402). Please check your account."
-rescue HybiscusPdfReport::ApiErrors::UnauthorizedError => e
+rescue HybiscusPdfReport::UnauthorizedError => e
   puts "Unauthorized (HTTP 401). Please check your API key."
-rescue HybiscusPdfReport::ApiErrors::BadRequestError => e
+rescue HybiscusPdfReport::BadRequestError => e
   puts "Bad request (HTTP 400). Please check your request data."
-rescue HybiscusPdfReport::ApiErrors::RateLimitError => e
+rescue HybiscusPdfReport::RateLimitError => e
   puts "Rate limit error persisted after retries. Please try again later."
-rescue HybiscusPdfReport::ApiErrors::ApiError => e
+rescue HybiscusPdfReport::ApiError => e
   puts "API error: #{e.message} (HTTP #{e.status_code})"
 end
 ```
@@ -426,6 +488,10 @@ end
 - `UnprocessableContentError` (HTTP 422) - Request data cannot be processed
 - `ApiRequestsQuotaReachedError` (HTTP 429) - API request quota exceeded
 - `RateLimitError` (HTTP 503) - Rate limit exceeded (automatically retried)
+
+#### Inspecting Detailed Error Information (especially for errors 422)
+
+All API errors provide detailed information about what went wrong. This is especially usefull for errors of 422, which indicate you have an error in your JSON. You can access this information using the `error.full_message` attribute.
 
 ### Response Objects
 

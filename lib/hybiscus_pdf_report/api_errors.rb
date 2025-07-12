@@ -7,12 +7,13 @@ module HybiscusPdfReport
   # rubocop:disable Style/CommentedKeyword
   # Base error class for all Hybiscus PDF Report API errors.
   class ApiError < StandardError
-    attr_reader :response, :status_code
+    attr_reader :response, :status_code, :full_message
 
-    def initialize(message = nil, response: nil, status_code: nil)
+    def initialize(message = nil, response: nil, status_code: nil, full_message: nil)
       super(message)
       @response = response
       @status_code = status_code
+      @full_message = full_message
     end
   end
 

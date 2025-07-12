@@ -17,7 +17,7 @@ module HybiscusPdfReport
   autoload :ResponseObject, "hybiscus_pdf_report/response_object"
 
   # Error handling
-  autoload :APIErrors, "hybiscus_pdf_report/api_errors"
+  require_relative "hybiscus_pdf_report/api_errors"
 
   # Report building
   autoload :ReportBuilder, "hybiscus_pdf_report/report_builder"

@@ -67,13 +67,22 @@ module HybiscusPdfReport
 
     private
 
+    # rubocop: disable Metrics/AbcSize, Metrics/MethodLength
     def request(endpoint:, http_method: :get, headers: {}, params: {}, body: {})
       raise "Client not defined" unless defined? @client
 
       retry_wrapper = RequestRetryWrapper.new(logger: defined?(Rails) ? Rails.logger : nil)
 
       response_body = retry_wrapper.with_retries do
-        @response = client.connection.public_send(http_method, endpoint, params.merge(body), headers)
+        @response = if body.is_a?(String)
+                      # JSON-String direkt als Body senden
+                      client.connection.public_send(http_method, endpoint, params) do |req|
+                        req.body = body
+                      end
+                    else
+                      # Hash mit params mergen (bisheriges Verhalten)
+                      client.connection.public_send(http_method, endpoint, params.merge(body), headers)
+                    end
         raise_error unless response_successful? && no_json_error?
 
         # Return raw body for binary data (no JSON parsing)
@@ -84,6 +93,7 @@ module HybiscusPdfReport
 
       response_body
     end
+    # rubocop: enable Metrics/AbcSize, Metrics/MethodLength
 
     def update_last_request_information(response_body)
       @last_request_time_counting_against_rate_limit = Time.now
@@ -92,9 +102,13 @@ module HybiscusPdfReport
     end
 
     def raise_error
-      # logger.debug response.body
+      error_message = "Code: #{response.status}, response: #{response.reason_phrase}"
 
-      raise error_class(response.status), "Code: #{response.status}, response: #{response.reason_phrase}"
+      raise error_class(response.status).new(
+        error_message,
+        full_message: response.body,
+        status_code: response.status
+      )
     end
 
     def error_class(status)
