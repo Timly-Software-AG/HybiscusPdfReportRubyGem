@@ -304,15 +304,23 @@ end
 
 #### Custom Template Name
 
-Override the template naming convention:
+You can override the file name of the returned file by overriding the `template__name` method. The `.json.erb` extension is added automatically:
 
 ```ruby
 class SalesReport < HybiscusPdfReport::ReportBuilder
   def template_name
-    "monthly_sales.json.erb"  # Instead of sales_report.json.erb
+    "monthly_sales"  # Will use monthly_sales.json.erb
+  end
+end
+
+class QuarterlyReport < HybiscusPdfReport::ReportBuilder
+  def template__name
+    "reports/quarterly_summary"  # Will use reports/quarterly_summary.json.erb
   end
 end
 ```
+
+> **Note**: The `.json.erb` extension is automatically added, so you only need to specify the base name.
 
 #### Dynamic Template Generation
 

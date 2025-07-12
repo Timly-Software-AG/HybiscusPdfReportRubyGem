@@ -27,13 +27,6 @@ RSpec.describe HybiscusPdfReport::ReportBuilder do
     end
   end
 
-  describe "#template_name" do
-    it "returns the correct template filename" do
-      builder = described_class.new
-      expect(builder.template_name).to eq("report_builder.json.erb")
-    end
-  end
-
   describe "#template_path" do
     it "returns the full path to the template file" do
       builder = described_class.new(template_dir: "/tmp")
@@ -114,6 +107,22 @@ RSpec.describe HybiscusPdfReport::ReportBuilder do
       expect(report.report_name).to eq("Invoice Report")
       expect(report.instance_variable_get(:@invoice)).to eq(invoice)
       expect(report.instance_variable_get(:@customer)).to eq("ACME Corp")
+    end
+
+    it "supports custom template base names" do
+      custom_class = Class.new(described_class) do
+        def self.name
+          "CustomTemplateReport" # Provide a class name for the dynamic class
+        end
+
+        def template_name
+          "my_custom_template"
+        end
+      end
+
+      report = custom_class.new
+      expect(report.template_name).to eq("my_custom_template")
+      expect(report.template_path).to end_with("my_custom_template.json.erb")
     end
   end
 end

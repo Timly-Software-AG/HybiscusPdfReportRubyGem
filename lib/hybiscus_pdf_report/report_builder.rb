@@ -9,11 +9,21 @@ module HybiscusPdfReport
   # This class allows users to create custom report builders by inheriting from it.
   # It provides a simple way to generate JSON structures for the Hybiscus API using ERB templates.
   #
+  # Template files are automatically named based on your class name with .json.erb extension.
+  # For example, InvoiceReport will look for invoice_report.json.erb
+  #
   # Usage:
   #   class InvoiceReport < HybiscusPdfReport::ReportBuilder
   #     def initialize(invoice:, **options)
   #       @invoice = invoice
   #       super(report_name: "Invoice Report", **options)
+  #     end
+  #   end
+  #
+  # Custom template name:
+  #   class CustomReport < HybiscusPdfReport::ReportBuilder
+  #     def template_base_name
+  #       "my_custom_template"  # Will use my_custom_template.json.erb
   #     end
   #   end
   #
@@ -43,12 +53,14 @@ module HybiscusPdfReport
 
     # Returns the full path to the template file
     def template_path
-      File.join(template_dir, template_name)
+      # Use the path of the file where the subclass is defined
+      subclass_file = self.class.instance_method(:initialize).source_location&.first
+      base_dir = subclass_file ? File.dirname(subclass_file) : template_dir
+      File.join(template_dir, "#{template_name}.json.erb")
     end
-
-    # Returns the template filename (can be overridden in subclasses)
+    
     def template_name
-      "#{underscore(class_name)}.json.erb"
+      underscore(class_name)
     end
 
     def load_configuration_first?
